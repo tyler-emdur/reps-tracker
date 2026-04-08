@@ -8,7 +8,7 @@ const redis = new Redis({
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, PATCH, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -42,6 +42,30 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: 'Failed to save item' }, { status: 500, headers: CORS });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, ...updates } = await req.json();
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400, headers: CORS });
+
+    const items = (await redis.lrange(KEY, 0, -1)) as { id: string; [key: string]: unknown }[];
+    const idx = items.findIndex((item) => item.id === id);
+    if (idx === -1) return NextResponse.json({ error: 'Item not found' }, { status: 404, headers: CORS });
+
+    const updated = { ...items[idx], ...updates };
+    items[idx] = updated;
+
+    await redis.del(KEY);
+    if (items.length > 0) {
+      await redis.rpush(KEY, ...([...items].reverse() as [object, ...object[]]));
+    }
+
+    return NextResponse.json(updated, { headers: CORS });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: 'Failed to update item' }, { status: 500, headers: CORS });
   }
 }
 

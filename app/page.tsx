@@ -15,6 +15,24 @@ interface Item {
 
 type SortKey = 'newest' | 'oldest' | 'name' | 'price';
 
+const ADMIN_PASSWORD = 'tyleriscool';
+
+function buildAffiliateUrl(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    u.searchParams.delete('ref');
+    u.searchParams.set('ref', '200934539');
+    return u.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+function formatPrice(price: string): string {
+  if (!price) return '—';
+  return price.replace(/¥/g, '$').replace(/CNY/gi, 'USD');
+}
+
 export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +40,12 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<SortKey>('newest');
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setIsAdmin(localStorage.getItem('adminMode') === 'true');
+  }, []);
 
   const fetchItems = useCallback(async () => {
     try {
@@ -37,7 +61,19 @@ export default function Home() {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  // Derived state
+  const handleLockClick = () => {
+    if (isAdmin) {
+      localStorage.removeItem('adminMode');
+      setIsAdmin(false);
+    } else {
+      const pw = prompt('Enter admin password:');
+      if (pw === ADMIN_PASSWORD) {
+        localStorage.setItem('adminMode', 'true');
+        setIsAdmin(true);
+      }
+    }
+  };
+
   const categories = ['All', ...Array.from(new Set(items.map((i) => i.category).filter(Boolean))).sort()];
 
   const parsePrice = (p: string) => {
@@ -73,7 +109,14 @@ export default function Home() {
     }
   };
 
-  const totalValue = items.reduce((sum, i) => sum + parsePrice(i.price), 0).toFixed(2);
+  const updateCategory = async (id: string, category: string) => {
+    await fetch('/api/items', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, category }),
+    });
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, category } : i));
+  };
 
   return (
     <main className={styles.main}>
@@ -83,10 +126,15 @@ export default function Home() {
           <h1 className={styles.title}>Rep Tracker</h1>
           <div className={styles.stats}>
             <span className={styles.stat}>{items.length} items</span>
-            {parseFloat(totalValue) > 0 && (
-              <span className={styles.stat}>¥{totalValue} total</span>
-            )}
           </div>
+          <button
+            className={`${styles.lockBtn} ${isAdmin ? styles.lockBtnActive : ''}`}
+            onClick={handleLockClick}
+            title={isAdmin ? 'Exit admin mode' : 'Admin login'}
+            aria-label={isAdmin ? 'Exit admin mode' : 'Admin login'}
+          >
+            {isAdmin ? '🔓' : '🔒'}
+          </button>
         </div>
 
         <div className={styles.controls}>
@@ -162,30 +210,50 @@ export default function Home() {
                 ) : (
                   <div className={styles.noImg}>No image</div>
                 )}
-                <button
-                  className={styles.delBtn}
-                  onClick={() => deleteItem(item.id)}
-                  disabled={deletingId === item.id}
-                  title="Remove"
-                  aria-label="Remove item"
-                >
-                  {deletingId === item.id ? '…' : '×'}
-                </button>
+                {isAdmin && (
+                  <button
+                    className={styles.delBtn}
+                    onClick={() => deleteItem(item.id)}
+                    disabled={deletingId === item.id}
+                    title="Remove"
+                    aria-label="Remove item"
+                  >
+                    {deletingId === item.id ? '…' : '×'}
+                  </button>
+                )}
               </div>
 
               <div className={styles.body}>
-                <span className={styles.categoryTag}>{item.category}</span>
+                {isAdmin ? (
+                  <input
+                    className={styles.categoryInput}
+                    value={editingCategory[item.id] ?? item.category}
+                    onChange={(e) =>
+                      setEditingCategory((prev) => ({ ...prev, [item.id]: e.target.value }))
+                    }
+                    onBlur={async (e) => {
+                      const val = e.target.value.trim() || 'Uncategorized';
+                      await updateCategory(item.id, val);
+                      setEditingCategory((prev) => { const n = { ...prev }; delete n[item.id]; return n; });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    }}
+                  />
+                ) : (
+                  <span className={styles.categoryTag}>{item.category}</span>
+                )}
                 <p className={styles.name}>{item.name}</p>
                 <div className={styles.footer}>
-                  <span className={styles.price}>{item.price || '—'}</span>
+                  <span className={styles.price}>{formatPrice(item.price)}</span>
                   {item.url && (
                     <a
-                      href={item.url}
+                      href={buildAffiliateUrl(item.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={styles.link}
+                      className={styles.buyBtn}
                     >
-                      Buy →
+                      Buy
                     </a>
                   )}
                 </div>

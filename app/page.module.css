@@ -9,7 +9,7 @@
 
 .titleRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -31,6 +31,24 @@
   border-radius: 20px;
   padding: 3px 10px;
 }
+
+.lockBtn {
+  margin-left: auto;
+  background: #0e0e0e;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.lockBtn:hover { border-color: #333; background: #161616; }
+.lockBtnActive { border-color: #166534; background: #052e16; }
 
 /* Controls row */
 .controls {
@@ -230,6 +248,21 @@
   color: #4ade80;
 }
 
+.categoryInput {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #4ade80;
+  background: #0a1a0f;
+  border: 1px solid #166534;
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+}
+.categoryInput:focus { border-color: #4ade80; }
+
 .name {
   font-size: 14px;
   font-weight: 600;
@@ -242,6 +275,7 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 6px;
+  gap: 8px;
 }
 
 .price {
@@ -250,13 +284,23 @@
   color: #fff;
 }
 
-.link {
-  font-size: 11px;
-  font-weight: 600;
-  color: #4ade80;
-  transition: color 0.15s;
+.buyBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 18px;
+  background: #4ade80;
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.link:hover { color: #22c55e; }
+.buyBtn:hover { background: #22c55e; transform: scale(1.04); }
+.buyBtn:active { transform: scale(0.97); }
 
 .date {
   font-size: 10px;
